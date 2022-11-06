@@ -10,8 +10,8 @@ export default defineConfig({
   },
   outputPath: 'dist',
   mode: 'doc',
-  base: '/front-knowledge/',
-  publicPath: '/front-knowledge/',
+  base: '/frontend-knowledge/',
+  publicPath: '/frontend-knowledge/',
   exportStatic: {},
   404: true,
   resolve: {
@@ -20,5 +20,5 @@ export default defineConfig({
   targets: {
     ie: 11,
   },
-  styles: [``]
+  styles: [``],
 });

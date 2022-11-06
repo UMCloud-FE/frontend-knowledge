@@ -1,4 +1,4 @@
-# front-knowledge
+# frontend-knowledge
 
 ## 开始使用
 
@@ -36,9 +36,19 @@ $ npm run build
 
 - 将文档放在 docs 文件夹目录下
 - 侧边栏 menu 通过文件夹目录层级自动生成，目前支持两级
-- 可使用 dumi 的md配置项，例如：
+- 可使用 dumi 的 md 配置项，例如：
+
 ```
 ---
 order: 1
 ---
 ```
+
+## 手动部署
+
+1. yarn docs:build
+2. yarn deploy
+
+地址： https://umcloud-fe.github.io/frontend-knowledge/
+
+## 自动部署
