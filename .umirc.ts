@@ -10,8 +10,8 @@ export default defineConfig({
   },
   outputPath: 'dist',
   mode: 'doc',
-  base: '/docs/',
-  publicPath: '/docs/',
+  base: '/front-knowledge/',
+  publicPath: '/front-knowledge/',
   exportStatic: {},
   404: true,
   resolve: {
