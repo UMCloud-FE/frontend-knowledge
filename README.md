@@ -52,3 +52,5 @@ order: 1
 地址： https://umcloud-fe.github.io/frontend-knowledge/
 
 ## 自动部署
+
+自动 push 代码到 main 分支即可
