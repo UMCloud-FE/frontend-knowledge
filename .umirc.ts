@@ -8,6 +8,7 @@ export default defineConfig({
   history: {
     type: 'browser',
   },
+  locales: [['zh-CN', '中文']],
   outputPath: 'dist',
   mode: 'doc',
   base: '/frontend-knowledge/',
