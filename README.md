@@ -53,4 +53,4 @@ order: 1
 
 ## 自动部署
 
-自动 push 代码到 main 分支即可
+自动 push 代码到 deploy 分支即可
