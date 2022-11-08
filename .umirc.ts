@@ -22,4 +22,7 @@ export default defineConfig({
     ie: 11,
   },
   styles: [``],
+  analytics: {
+    baidu: '6f17617aa4544e964fa0175726c2a460',
+  },
 });

@@ -30,6 +30,7 @@
     ]
   },
   "dependencies": {
+    "@umijs/plugin-analytics": "^0.2.3",
     "react": "^18.0.0"
   },
   "devDependencies": {
