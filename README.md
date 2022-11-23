@@ -1,5 +1,7 @@
 # frontend-knowledge
 
+## 注意：node 版本需要为 16.X，否则执行 yarn start 会报错 node:internal/crypto/hash:67 this[kHandle] = new \_Hash(algorithm, xofLen);
+
 ## 开始使用
 
 安装依赖,
