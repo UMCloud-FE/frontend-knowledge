@@ -18,7 +18,13 @@ opnsense 的操作
 
 ## 四、B 卷 2.2.3Linux 系统日志管理
 
-放弃
+```
+auth.info,authpriv.info   /var/log/auth.log
+kern.debug   /var/log/kern.log
+user.err   /var/log/err.log @172.25.254.97
+```
+
+参考文档，瞎写的：https://blog.csdn.net/Zheng__Huang/article/details/108286741
 
 ## 五、A 卷 B 卷[3.1.4 网络流量监控](https://blog.csdn.net/zwf8558/article/details/127624058?spm=1001.2101.3001.6650.6&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EOPENSEARCH%7ERate-6-127624058-blog-127623715.pc_relevant_recovery_v2&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EOPENSEARCH%7ERate-6-127624058-blog-127623715.pc_relevant_recovery_v2&utm_relevant_index=7)
 
