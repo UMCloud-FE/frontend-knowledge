@@ -27,3 +27,13 @@ this.timer = null;
 #### 借鉴
 
 [一些其他的思路](https://juejin.cn/post/7020776405751300132)
+
+### 二、父子组件获取值问题
+
+1. 子组件是函数组件
+   - 首先子组件需要用 forwardRef 包裹一层，然后将要暴露的数据写成一个方法放在 useImperativeHandle 里面
+   - 父组件中，给当前子组件绑定一个 ref，然后通过 子组件.current.暴露的方法
+2. 子组件是一个 form 的函数组件（form 组件是当前公司组件库里面的 form 表单）
+   - 子组件利用 formDecorator 包裹主
+   - 父组件中，通过 useRef 获取当前子组件
+   - 父组件直接通过 (invoiceDataRef.current as any).getFieldValue('invoiceAmount') 获取子组件里面的数据。（备注：invoiceDataRef 是当前子组件）
