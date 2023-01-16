@@ -33,9 +33,6 @@ export default defineConfig({
     docDirs: ['docs'], // 2.0 默认值
     // atomDirs: [{ type: 'component', dir: 'src' }], // 2.0 默认值
   },
-  targets: {
-    ie: 11,
-  },
   styles: [``],
   analytics: {
     baidu: '6f17617aa4544e964fa0175726c2a460',
