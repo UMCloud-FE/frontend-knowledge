@@ -33,9 +33,6 @@ export default defineConfig({
     docDirs: ['docs'], // 2.0 默认值
     // atomDirs: [{ type: 'component', dir: 'src' }], // 2.0 默认值
   },
-  targets: {
-    ie: 11,
-  },
   styles: [`
     .dumi-default-toc > li > a.active {
       border-inline-start-width: 3px !important;

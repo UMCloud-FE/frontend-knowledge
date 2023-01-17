@@ -2,11 +2,11 @@
   "name": "frontend-knowledge",
   "version": "2.0.0",
   "description": "",
-  "repository": "https://github.com/UMCloud-FE/frontend-knowledge",
   "license": "MIT",
   "scripts": {
-    "build": "dumi build",
+    "deploy": "gh-pages -d dist",
     "dev": "dumi dev",
+    "docs:build": "dumi build",
     "prepare": "husky install && dumi setup",
     "start": "npm run dev"
   },
@@ -20,12 +20,15 @@
       "prettier --write --no-error-on-unmatched-pattern"
     ]
   },
+  "dependencies": {},
   "devDependencies": {
     "@commitlint/cli": "^17.1.2",
     "@commitlint/config-conventional": "^17.1.0",
     "dumi": "^2.0.2",
+    "gh-pages": "^4.0.0",
     "husky": "^8.0.1",
     "lint-staged": "^13.0.3",
+    "npm": "^9.3.0",
     "prettier": "^2.7.1"
   },
   "authors": []
