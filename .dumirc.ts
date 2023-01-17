@@ -36,7 +36,11 @@ export default defineConfig({
   targets: {
     ie: 11,
   },
-  styles: [``],
+  styles: [`
+    .dumi-default-toc > li > a.active {
+      border-inline-start-width: 3px !important;
+    }
+  `],
   analytics: {
     baidu: '6f17617aa4544e964fa0175726c2a460',
   },

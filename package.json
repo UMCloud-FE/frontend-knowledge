@@ -2,14 +2,14 @@
   "name": "frontend-knowledge",
   "version": "2.0.0",
   "description": "",
-  "scripts": {
-    "start": "npm run dev",
-    "dev": "dumi dev",
-    "build": "dumi build",
-    "prepare": "husky install && dumi setup"
-  },
-  "authors": [],
+  "repository": "https://github.com/UMCloud-FE/frontend-knowledge",
   "license": "MIT",
+  "scripts": {
+    "build": "dumi build",
+    "dev": "dumi dev",
+    "prepare": "husky install && dumi setup",
+    "start": "npm run dev"
+  },
   "commitlint": {
     "extends": [
       "@commitlint/config-conventional"
@@ -27,5 +27,6 @@
     "husky": "^8.0.1",
     "lint-staged": "^13.0.3",
     "prettier": "^2.7.1"
-  }
+  },
+  "authors": []
 }
