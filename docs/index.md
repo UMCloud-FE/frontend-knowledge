@@ -18,3 +18,20 @@
 持续产出前端技术相关的内容
 
 问问自己：**这周个人产出和价值是什么？**
+
+```jsx
+import React from 'react';
+
+export default () => (
+  <h1>
+    <div
+      style={{
+        background: `url(https://img.shields.io/github/gist/stars/47a4d00457a92aa426dbd48a18776322?style=social) no-repeat`,
+        height: '30px',
+      }}
+    >
+      {' '}
+    </div>
+  </h1>
+);
+```

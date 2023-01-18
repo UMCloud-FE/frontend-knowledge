@@ -13,7 +13,7 @@ group:
 
 ## 1. 原理
 
-### 虚拟 DOM 与 fiber 架构
+### 虚拟 DOM
 
 #### 为什么使用虚拟 DOM（vdom）
 
@@ -33,25 +33,28 @@ react 渲染树：
 
 算法策略
 
+- 深度优先遍历
 - 同级比较
 - 拥有不同类型的两个组件将会生成不同的树形结构。
 - 使用 key 来保持稳定渲染
 
 diff 原则
 
-- 删除：新 vdom 不存在时
+- 删除：newVdom 不存在时
 - 替换：vdom 和 newVdom 类型不同或 key 不同时
-- 更新：有相同类型和 key 但 vdom 和 vdom 不同时
+- 更新：有相同类型和 key 但 vdom 和 newVdom 不同时
 
-#### fiber
+### Fiber 结构
 
 为什么需要 fiber
 
+一个新的更新渲染结构，更好的遍历渲染树，提高性能。
+
 - diff 算法采用深度优先遍历（递归）的方式，对于大型项目，组件树会很大，这个时候递归遍历的成本就会很高，会造成主线程被持续占用，结果就是主线程上的布局、动画等周期性任务就无法立即得到处理，造成视觉上的卡顿，影响用户体验。
 
-fiber 新功能
+fiber 核心思想
 
-1. 增量渲染（把渲染任务拆分成块，匀到多帧），使用链表循环代替递归来进行深度优先遍历，算法时间复杂度 O(n)
+1. 增量渲染，空闲更新（把渲染任务拆分成块，匀到多帧），使用链表循环代替递归来进行深度优先遍历，算法时间复杂度 O(n)
 2. 更新时能够暂停，终止，复用渲染任务
 3. 给不同类型的更新赋予优先级
 4. 给新版 react 提供并发的基础能力
@@ -60,11 +63,28 @@ fiber 新功能
 
 fiber 树(双向链表)：
 
+```js
+// 参考 jsx
+<div>
+  <article>
+    <span></span>
+  </article>
+  <p>
+    <strong></strong>
+  </p>
+  <a></a>
+</div>
+```
+
 ![图片](/frontend-knowledge/images/react/fiber-2.png)
 
 因为要借助 fiber，所以在 vdom 外需要包装一个 fiber node 的封装来参与调度。
 
 ## 2. 实现一个 mini-fiber
+
+### 〇 流程图
+
+![图片](/frontend-knowledge/images/react/fiber.png)
 
 ### ① Tags
 
@@ -237,7 +257,7 @@ requestIdleCallback(workLoop);
 
 ```js
 function workLoop(IdleDeadLine) {
-  // 可以自己定义核实执行什么事件，这里判断只要空闲就排队
+  // 可以自己定义优先级来核实执行什么事件，这里判断只要空闲就排队
   while (wip && IdleDeadLine.timeRemaining() > 0) {
     // 执行任务：使用新的 O(n) 算法
     performUnitOfWork();
@@ -261,7 +281,7 @@ function workLoop(IdleDeadLine) {
 // performUnitOfWork
 const { tag } = wip;
 
-// 通过 tag 区分吧冉的渲染模式
+// 通过 tag 区分渲染模式
 switch (tag) {
   case HostComponent:
     updateHostComponent(wip);
@@ -362,25 +382,9 @@ function getParentNode(wip) {
 // prev  {a: 1}
 // next { b: 3}
 export function updateNode(node, prevVal, nextVal) {
-  Object.keys(prevVal).forEach((k) => {
-    if (k === 'children') {
-      // 有可能是文本
-      if (isStringOrNumber(prevVal[k])) {
-        node.textContent = '';
-      }
-    } else if (k.slice(0, 2) === 'on') {
-      const eventName = k.slice(2).toLocaleLowerCase();
-      node.removeEventListener(eventName, prevVal[k]);
-    } else {
-      if (!(k in nextVal)) {
-        node[k] = '';
-      }
-    }
-  });
-
   Object.keys(nextVal).forEach((k) => {
     if (k === 'children') {
-      // 有可能是文本
+      // 有可能是文本，我们自己设置的文本节点 props.children
       if (isStringOrNumber(nextVal[k])) {
         node.textContent = nextVal[k] + '';
       }
@@ -398,13 +402,22 @@ function commitDeletions(deletions, parentNode) {
     parentNode.removeChild(getStateNode(deletions[i]));
   }
 }
+
+function getStateNode(fiber) {
+  let tem = fiber;
+  while (!tem.stateNode) {
+    tem = tem.child;
+  }
+
+  return tem.stateNode;
+}
 ```
 
 ### ⑤ 渲染节点
 
 上边的 commit 操作我们看到了，是根据节点的 flags 和 stateNode 实例来更新的。在渲染的时候，需要写入这两份属性，
 
-渲染原生节点：
+1. 渲染原生节点：
 
 ```js
 export function updateHostComponent(wip) {
