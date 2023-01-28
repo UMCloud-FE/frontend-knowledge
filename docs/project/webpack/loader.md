@@ -1,3 +1,12 @@
+---
+title: Loader
+order: 1
+
+group:
+  title: Webpack
+  order: 0
+---
+
 # loader 使用
 
 webpack 作为一个构建工具，可以将各种资源打包成通用模块，loader 是 webpack 的一个个功能函数，主要用来处理各种资源，webpack 只能编译 js,json，但前端各种资源模块都有：css、less、jsx、ts、图片等，需要使用 loader 进行处理后，交给 webpack 编译
