@@ -11,14 +11,14 @@ export default defineConfig({
       { title: '资源', link: '/common' },
     ],
     // 需要特殊配置的目录
-    sidebar: {
-      '/project/react/qa': [
-        { title: '常见问题', children: [] }
-      ],
-      '/project/react/source': [
-        { title: '框架', children: [] }
-      ]
-    },
+    // sidebar: {
+    //   '/project/react/qa': [
+    //     { title: '常见问题', children: [] }
+    //   ],
+    //   '/project/react/source': [
+    //     { title: '框架', children: [] }
+    //   ]
+    // },
     footer: 'UCloud 云通信前端团队'
   },
   history: {
