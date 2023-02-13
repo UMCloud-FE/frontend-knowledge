@@ -15,11 +15,12 @@ module.exports = (resource) => {
 
 ### 2、常见的 loader
 
-| 名称         | 描述                             |
-| ------------ | -------------------------------- |
-| babel-loader | 转化 ES6、ES7 等 JS 新特性和语法 |
-| html-loader  | 将生成的资源插入 html 中         |
-| style-loader | 讲 css 文件插入 html 中          |
+| 名称         | 描述                                                                   |
+| ------------ | ---------------------------------------------------------------------- |
+| raw-loader   | 读取文件内容，过滤特殊字符，添加导出语句，将文件转化为 javascript 模块 |
+| babel-loader | 转化 ES6、ES7 等 JS 新特性和语法                                       |
+| style-loader | 讲 css 文件插入 html 中                                                |
+| css-loader   | 处理 css 文件中的 url 和 import 路径问题                               |
 
 ### 3、如何配置 loader
 
@@ -32,7 +33,7 @@ module.exports = {
     rules: [
       {
         test: /\.css$/,
-        use: 'css-loader',
+        use: ['style-loader', 'css-loader'],
       },
     ],
   },
@@ -67,19 +68,52 @@ runLoaders(
 
 ## 三、同步 loader 和异步 loader
 
-## 四、文件输出
+```js
+// 同步执行，返回转化后的文件
+module.exports = (context) => {
+  return context;
+};
 
-## 五、合成雪碧图
+// 异步执行，返回更多信息
+module.exports = (context) => {
+  this.callback(null, context, sourceMap, ast);
+};
+```
 
-## 六、常见 loader 源码解析
+## 四、常见 loader 源码解析
 
-- markdown-loader
-- less-loader
-- 合并雪碧图
+### 1、raw-loader
 
-## 七、webpack 执行的生命周期
+```js
+module.exports = (source) => {
+  const { esModule } = this.getOptions();
+  const content = JSON.stringify(source)
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+  const isEsModule = typeof esModule !== 'undefined' ? esModule : true;
+  return `{${
+    isEsModule ? 'default.export = ' : 'module.exports = '
+  } ${content}}`;
+};
+```
 
-- loader 先执行还是 plugin 先执行？
+### 2、babel-loader
+
+```js
+test;
+```
+
+### 3、markdown-loader
+
+### 4、style-loader 与 css-loader 分析
+
+## 五、实战开发
+
+### 1、合并雪碧图
+
+### 2、将文件输出压缩包
+
+## 六、webpack 执行的生命周期
 
 - 1、初始化参数：webpack 读取 webpack 配置，得到最终的初始化参数
 - 2、开始编译：webpack 根据初始化参数，实例化 compiler 对象，并加载 plugin 配置，执行 runner 方法
