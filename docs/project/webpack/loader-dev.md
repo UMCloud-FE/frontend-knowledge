@@ -80,7 +80,7 @@ module.exports = (context) => {
 };
 ```
 
-## 四、常见 loader 源码解析
+## 四、常见 loader 代码实践
 
 ### 1、raw-loader
 
@@ -100,20 +100,32 @@ module.exports = (source) => {
 ### 2、babel-loader
 
 ```js
-test;
+const core = require('@babel/core');
+
+module.exports = function (resource) {
+  const options = this.getOptions();
+  const { code, map, ast } = core.transformSync(resource, options);
+  console.log('code', code);
+  console.log('map', map);
+  console.log('ast', ast);
+  this.callback(null, code, map, ast);
+};
 ```
 
 ### 3、markdown-loader
 
-### 4、style-loader 与 css-loader 分析
+```js
+const MarkdownIt = require('markdown-it');
+const md = new MarkdownIt();
 
-## 五、实战开发
+module.exports = function (source) {
+  const content = md.render(source);
+  const code = `module.exports = ${JSON.stringify(content)}`;
+  return code;
+};
+```
 
-### 1、合并雪碧图
-
-### 2、将文件输出压缩包
-
-## 六、webpack 执行的生命周期
+## 五、webpack 执行的生命周期
 
 - 1、初始化参数：webpack 读取 webpack 配置，得到最终的初始化参数
 - 2、开始编译：webpack 根据初始化参数，实例化 compiler 对象，并加载 plugin 配置，执行 runner 方法
