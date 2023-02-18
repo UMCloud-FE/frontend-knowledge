@@ -504,6 +504,7 @@ function reconcileChildren(wip, children) {
     const same = sameNode(newFiber, oldFiber);
 
     if (same) {
+      // 标记：更新节点
       Object.assign(newFiber, {
         stateNode: oldFiber.stateNode,
         alternate: oldFiber,
@@ -512,6 +513,7 @@ function reconcileChildren(wip, children) {
     }
 
     if (!same && oldFiber) {
+      // 与新的不一样，标记：删除
       deleteChild(wip, oldFiber);
     }
 
@@ -519,13 +521,25 @@ function reconcileChildren(wip, children) {
       oldFiber = oldFiber.sibling;
     }
 
-    if (previousNewFiber === null) {
-      // 头结点
+    // createFiber 默认的 flags就是标识：Placement 新建
+    if (i === 0) {
+      // 子节点中的第一个，把链表构建起来
       wip.child = newFiber;
     } else {
       previousNewFiber.sibling = newFiber;
     }
+
     previousNewFiber = newFiber;
+  }
+}
+
+function deleteChild(returnFiber, childToDelete) {
+  const deletions = returnFiber.deletions;
+
+  if (deletions) {
+    returnFiber.deletions.push(childToDelete);
+  } else {
+    returnFiber.deletions = [childToDelete];
   }
 }
 
