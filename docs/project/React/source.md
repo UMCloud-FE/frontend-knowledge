@@ -242,7 +242,7 @@ work in process 表示当前正在处理的 fiber 节点。
 
 我们看到了，初始化工作完成后，似乎没有渲染的操作，只是 new 了一堆对象。所以需要创建一个调度任务。
 
-### ④ 调度器
+### ④ 调度器之一
 
 浏览器有自己的调度工具：
 
@@ -419,19 +419,67 @@ function getStateNode(fiber) {
 
 1. 渲染原生节点：
 
+createElement 创建元素，props 通过 updateNode 更新
+
 ```js
 export function updateHostComponent(wip) {
   if (!wip.stateNode) {
+    // type : dom.nodeName.toLowerCase()
     wip.stateNode = document.createElement(wip.type);
     updateNode(wip.stateNode, {}, wip.props);
   }
 
-  // 协调子节点，还记得上边原生节点放在了 props.children 中
+  // 协调子节点
   reconcileChildren(wip, wip.props.children);
 }
 ```
 
-调度函数：
+2. 渲染文本节点
+
+```js
+export function updateTextComponent(wip) {
+  // 还记得上边原生节点放在了 props.children 中
+  wip.stateNode = document.createTextNode(wip.props.children);
+}
+```
+
+3. 渲染类式组件
+
+```js
+export function updateClassComponent(wip) {
+  const { type, props } = wip;
+
+  // type 是类的构造器
+  const instance = new type(props);
+  const children = instance.render();
+
+  reconcileChildren(wip, children);
+}
+```
+
+4. 渲染函数式组件
+
+```js
+export function updateFunctionComponent(wip) {
+  // 读取 hook 的操作之后讲hook原理时会提到
+  // renderWithHooks(wip);
+  const { type, props } = wip;
+
+  const children = type(props);
+
+  reconcileChildren(wip, children);
+}
+```
+
+5. 渲染 Fragment
+
+```js
+export function updateFragmentComponent(wip) {
+  reconcileChildren(wip, wip.props.children);
+}
+```
+
+最后是调节子节点函数，这也是 diff 算法实现的地方，设置 flag 也在这里：
 
 ```js
 function reconcileChildren(wip, children) {
@@ -485,3 +533,111 @@ function sameNode(a, b) {
   return a && b && a.type === b.type && a.key === b.key;
 }
 ```
+
+### ⑥ 调度器之二
+
+讲自定义调度 CPU 空闲时间片之前，先回顾一下之前加入调度器的函数：
+
+```js
+// root节点调用
+export function scheduleUpdateOnFiber(fiber) {
+  // work in process
+  wip = fiber;
+  wipRoot = fiber;
+
+  // 新建一个自定义的调度
+  scheduleCallback(workLoop);
+}
+```
+
+上边为了不使用 js 自带的调度器 requestIdleCallback，react 这里自定义了调度的实现。我们来简易实现一下这个调度器：
+
+---
+
+（调度器实现开始）
+
+```js
+// scheduler.js
+// 牵扯到最小堆的算法，可以参考知识库中基础部分算法
+import { push, pop, peek } from './minHeap';
+
+// 任务队列
+let taskQueue = [];
+// 任务计数
+let taskIdCounter = 1;
+
+// 任务优先级 延迟时间
+export function scheduleCallback(callback) {
+  const currentTime = getCurrentTime();
+
+  const timeout = -1; // 源码中还会有 priorityLevel 作为一个权重维度
+  const expirationTime = currentTime + timeout;
+
+  // 每次调度，id自增，push进堆
+  const newTask = {
+    id: taskIdCounter++,
+    callback, // 回调函数
+    expirationTime, // 任务开始时间
+    sortIndex: expirationTime, // 任务排序，取决于过期时间（这里简单的任务过期时间越近，优先级越高）
+  };
+  push(taskQueue, newTask);
+
+  // 请求调度
+  requestHostCallback();
+}
+
+// MessageChannel允许我们在不同的浏览上下文，比如window.open()打开的窗口或者iframe等之间建立通信管道，并通过两端的端口（port1和port2）发送消息。MessageChannel以DOM Event的形式发送消息，所以它属于异步的宏任务。
+const channel = new MessageChannel();
+const port = channel.port2;
+channel.port1.onmessage = function () {
+  handleWorkMessage();
+};
+
+function requestHostCallback() {
+  port.postMessage(null);
+}
+
+function handleWorkMessage() {
+  // 每次取出堆顶最小的
+  let currentTask = peek(taskQueue);
+  while (currentTask) {
+    // 暂不考虑执行进度以及中断执行
+    const callback = currentTask.callback;
+    currentTask.callback = null;
+    callback();
+    // 删除任务
+    pop(taskQueue);
+    // 拿当前等待时间最小的任务
+    currentTask = peek(taskQueue);
+  }
+}
+
+function getCurrentTime() {
+  // Date.now()：返回的时间戳没有被限制在一毫秒的精确度内，小于 1ms 的测试不出来结果。
+  // performance.now()：返回的时间戳以双精度浮点数 double 的形式表示时间，精度最高可达微秒级。不受系统影响。Date.now() 约等于 performance.timing.navigationStart + performance.now()
+  return performance.now();
+}
+```
+
+（调度器实现结束）
+
+---
+
+此时调度器外边的 loop 函数就可以精简了：
+
+```js
+function workLoop() {
+  while (wip) {
+    performUnitOfWork();
+  }
+
+  // 确保调度器在运行
+  // requestIdleCallback(workLoop);
+
+  if (!wip && wipRoot) {
+    commitRoot();
+  }
+}
+```
+
+### 〇 改进的流程图
