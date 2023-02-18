@@ -583,6 +583,7 @@ function getStateNode(fiber) {
     const same = sameNode(newFiber, oldFiber);
 
     if (same) {
+      // \u6807\u8BB0\uFF1A\u66F4\u65B0\u8282\u70B9
       Object.assign(newFiber, {
         stateNode: oldFiber.stateNode,
         alternate: oldFiber,
@@ -591,6 +592,7 @@ function getStateNode(fiber) {
     }
 
     if (!same && oldFiber) {
+      // \u4E0E\u65B0\u7684\u4E0D\u4E00\u6837\uFF0C\u6807\u8BB0\uFF1A\u5220\u9664
       deleteChild(wip, oldFiber);
     }
 
@@ -598,13 +600,25 @@ function getStateNode(fiber) {
       oldFiber = oldFiber.sibling;
     }
 
-    if (previousNewFiber === null) {
-      // \u5934\u7ED3\u70B9
+    // createFiber \u9ED8\u8BA4\u7684 flags\u5C31\u662F\u6807\u8BC6\uFF1APlacement \u65B0\u5EFA
+    if (i === 0) {
+      // \u5B50\u8282\u70B9\u4E2D\u7684\u7B2C\u4E00\u4E2A\uFF0C\u628A\u94FE\u8868\u6784\u5EFA\u8D77\u6765
       wip.child = newFiber;
     } else {
       previousNewFiber.sibling = newFiber;
     }
+
     previousNewFiber = newFiber;
+  }
+}
+
+function deleteChild(returnFiber, childToDelete) {
+  const deletions = returnFiber.deletions;
+
+  if (deletions) {
+    returnFiber.deletions.push(childToDelete);
+  } else {
+    returnFiber.deletions = [childToDelete];
   }
 }
 
