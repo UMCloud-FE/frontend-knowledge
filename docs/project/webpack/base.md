@@ -1,10 +1,6 @@
 ---
-title: 基础使用
-order: 0
-
-group:
-  title: Webpack
-  order: 0
+title: 一、Webpack基础使用
+order: 1
 ---
 
 # Webpack 基础使用

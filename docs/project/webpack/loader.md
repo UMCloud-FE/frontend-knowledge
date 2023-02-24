@@ -1,10 +1,6 @@
 ---
-title: Loader
-order: 1
-
-group:
-  title: Webpack
-  order: 0
+title: 二、Loader的使用
+order: 2
 ---
 
 # loader 使用

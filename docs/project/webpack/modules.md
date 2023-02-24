@@ -1,10 +1,6 @@
 ---
-title: 模块
-order: 2
-
-group:
-  title: Webpack
-  order: 0
+title: 四、Loader的使用
+order: 4
 ---
 
 # Modules 模块
