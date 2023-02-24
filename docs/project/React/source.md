@@ -655,3 +655,5 @@ function workLoop() {
 ```
 
 ### 〇 改进的流程图
+
+![图片](/frontend-knowledge/images/react/fiber-3.png)
