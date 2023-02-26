@@ -38,7 +38,7 @@ const KthLargest = function (k, nums) {
 KthLargest.prototype.add = function (val) {
   this.heap.offer(val);
   if (this.heap.size() > this.k) {
-    this.heap.poll();
+    // this.heap.poll();
   }
   return this.heap.peek();
 };
