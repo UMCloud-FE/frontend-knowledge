@@ -84,7 +84,27 @@ const createCompiler = (rawOptions) => {
   compiler.hooks.initialize.call();
   return compiler;
 };
+```
 
+注入插件
+
+```js
+if (Array.isArray(options.plugins)) {
+  for (const plugin of options.plugins) {
+    if (typeof plugin === 'function') {
+      plugin.call(compiler, compiler);
+    } else {
+      plugin.apply(compiler);
+    }
+  }
+}
+```
+
+- 判断是否有插件，如果有的化，就注入
+- 先判断如果是个函数，就直接调用，并将 compiler 作为参数传入，第一个 compiler 作为 this
+- 如果不是函数，插件必须是一个插件对象，调用对象的 apply 方法
+
+```js
 // 执行run方法
 const { compiler, watch, watchOptions } = create();
 if (watch) {
