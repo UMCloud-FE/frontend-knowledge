@@ -15,6 +15,6 @@ group:
 
 ## [四、Webpack 源码分析](/project/webpack/webpack)
 
-## [六、tapable 的使用](/project/webpack/tapable-implement)
+## [六、tapable 的使用](/project/webpack/tapable-Implement)
 
-## [7、实现一个 tapable](/project/webpack/tapable-usage)
+## [七、实现一个 tapable](/project/webpack/tapable-usage)
