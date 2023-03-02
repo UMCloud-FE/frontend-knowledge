@@ -26,9 +26,15 @@ export default () => (
   <h1>
     <div
       style={{
-        background: `url(https://img.shields.io/github/gist/stars/47a4d00457a92aa426dbd48a18776322?style=social) no-repeat`,
+        background: `url(https://img.shields.io/github/stars/UMCloud-FE/frontend-knowledge?style=social) no-repeat`,
         height: '30px',
       }}
+      onClick={() =>
+        window.open(
+          'https://github.com/UMCloud-FE/frontend-knowledge',
+          '_blank',
+        )
+      }
     >
       {' '}
     </div>
