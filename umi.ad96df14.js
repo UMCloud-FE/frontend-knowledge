@@ -1020,7 +1020,7 @@ export function renderWithHooks(wip) {
 }
 `,paraId:79,tocIndex:16},{value:"\u5230\u8FD9\u91CC\uFF0C\u4E00\u4E2A\u7B80\u5355\u7684 Hooks \u5C31\u521D\u59CB\u5316\u5B8C\u6210\u5566\u3002\u63A5\u4E0B\u6765\u770B\u770B\u5177\u4F53\u7684 hooks \u600E\u4E48\u7528\u5427\u3002",paraId:80,tocIndex:16},{value:"useReducer \u662F useState \u7684\u66FF\u4EE3\u54C1\uFF0C\u4F7F\u7528\u7684\u65B9\u5F0F\u5982\u4E0B\uFF1A",paraId:81,tocIndex:17},{value:`// \u58F0\u660E
 const initialState = 1;
-const reducer = (state: number, action: string) => {
+const reducer = (state: number, action: any | { type: string, value: any }) => {
   return state + 1;
 };
 
@@ -1042,12 +1042,15 @@ dispatch('add');
 `,paraId:85,tocIndex:17},{value:"\u63A5\u4E0B\u6765\u5C31\u662F\u5B9E\u73B0 \u5C06 reducer \u8F6C\u53D8\u4E3A dispatch \u4E86\u3002",paraId:86,tocIndex:17},{value:"\u6211\u4EEC\u58F0\u660E\u4E00\u4E2A\u8F6C\u6362\u51FD\u6570\uFF1A",paraId:87,tocIndex:17},{value:`function dispatchReducerAction(fiber, hook, reducer, action) {
   // hook.memorizedState = reducer ? reducer(hook.memorizedState) : action;
   if (reducer) {
+    hook.memorizedState = reducer(hook.memorizedState, action);
+  } else {
+    // useState: setState(1);
+    hook.memorizedState = action;
   }
 
-  if (typeof action === 'string') {
-  }
   // \u66F4\u65B0 alternate\uFF0C fiber\u5DF2\u7ECF\u6539\u53D8
   fiber.alternate = { ...fiber };
+  // \u5144\u5F1F\u8282\u70B9\u7F6E\u7A7A\uFF0C\u610F\u601D\u662F\u53EA\u66F4\u65B0\u5F53\u524D\u51FD\u6570\u8282\u70B9\u5373\u53EF\u3002\u8FD9\u91CC\u4E0D\u7528\u62C5\u5FC3\u94FE\u8868\u65AD\u6389\uFF0CreconcileChildren \u4E2D\u4F1A\u91CD\u65B0\u6784\u9020\u94FE\u8868\u5173\u7CFB\u3002hook \u66F4\u65B0\u53EA\u662F\u636E\u5C40\u90E8\u66F4\u65B0
   fiber.sibling = null;
   scheduleUpdateOnFiber(fiber);
 }
@@ -1064,8 +1067,9 @@ const dispatch = dispatchReducerAction.bind(
 );
 
 return [hook.memorizedState, dispatch];
-`,paraId:90,tocIndex:17},{value:"useState \u662F useReducer \u7684\u4E00\u4E2A\u7279\u6B8A\u5F62\u6001\uFF0C\u6CA1\u6709 reducer\uFF0C\u6BCF\u6B21\u53EA\u8FD4\u56DE action \u91CC\u7684\u503C\u3002",paraId:91,tocIndex:18},{value:`export function useState(initalState) {
-  return useReducer(null, initalState);
+`,paraId:90,tocIndex:17},{value:"useState \u662F useReducer \u7684\u4E00\u4E2A\u7279\u6B8A\u5F62\u6001\uFF0C\u6CA1\u6709 reducer\uFF0C\u6BCF\u6B21\u53EA\u8FD4\u56DE action \u91CC\u7684\u503C\u3002",paraId:91,tocIndex:18},{value:`// reducer \u4E3A null
+export function useState(initialState) {
+  return useReducer(null, initialState);
 }
 `,paraId:92,tocIndex:18}],Re={},at={title:"interface",toc:"menu",filename:"docs/project/ts/interface.md",order:2,group:{title:"TYPESCRIPT",order:1},description:"\u5907\u6CE8\uFF1A\u7D22\u5F15\u95EE\u9898"},tt=[{id:"\u4E00\u5B9A\u4E49",depth:2,title:"\u4E00\u3001\u5B9A\u4E49"},{id:"\u4E8C\u5177\u4F53\u4F7F\u7528",depth:2,title:"\u4E8C\u3001\u5177\u4F53\u4F7F\u7528"},{id:"\u4E09\u4E0E-type-\u7684\u6BD4\u8F83",depth:2,title:"\u4E09\u3001\u4E0E type \u7684\u6BD4\u8F83"}],ot=[{value:"\u4E3A\u7C7B\u578B\u547D\u540D",paraId:0,tocIndex:0},{value:"\u4E3A\u4F60\u7684\u4EE3\u7801\u6216\u8005\u7B2C\u4E09\u65B9\u4EE3\u7801\u5B9A\u4E49\u4E00\u4E2A\u5951\u7EA6",paraId:0,tocIndex:0},{value:`\u5B9A\u4E49\u8BF4\u660E
 `,paraId:1,tocIndex:1},{value:"\u5B9A\u4E49\uFF1A\u4E00\u822C\u63A5\u53E3\u7528 I \u5F00\u5934\uFF08I \u8868\u793A interface\uFF09\uFF0C\u7136\u540E I \u540E\u9762\u8DDF\u7740\u7684\u7B2C\u4E00\u4E2A\u5B57\u6BCD\u5927\u5199\u3002",paraId:2,tocIndex:1},{value:"\u4E3E\u4F8B",paraId:2,tocIndex:1},{value:`interface IPeople {
