@@ -756,7 +756,7 @@ useReducer 是 useState 的替代品，使用的方式如下：
 ```js
 // 声明
 const initialState = 1;
-const reducer = (state: number, action: string) => {
+const reducer = (state: number, action: any | { type: string, value: any }) => {
   return state + 1;
 };
 
@@ -792,12 +792,15 @@ export function useReducer(reducer, initalState) {
 function dispatchReducerAction(fiber, hook, reducer, action) {
   // hook.memorizedState = reducer ? reducer(hook.memorizedState) : action;
   if (reducer) {
+    hook.memorizedState = reducer(hook.memorizedState, action);
+  } else {
+    // useState: setState(1);
+    hook.memorizedState = action;
   }
 
-  if (typeof action === 'string') {
-  }
   // 更新 alternate， fiber已经改变
   fiber.alternate = { ...fiber };
+  // 兄弟节点置空，意思是只更新当前函数节点即可。这里不用担心链表断掉，reconcileChildren 中会重新构造链表关系。hook 更新只是据局部更新
   fiber.sibling = null;
   scheduleUpdateOnFiber(fiber);
 }
@@ -826,7 +829,8 @@ return [hook.memorizedState, dispatch];
 useState 是 useReducer 的一个特殊形态，没有 reducer，每次只返回 action 里的值。
 
 ```js
-export function useState(initalState) {
-  return useReducer(null, initalState);
+// reducer 为 null
+export function useState(initialState) {
+  return useReducer(null, initialState);
 }
 ```
