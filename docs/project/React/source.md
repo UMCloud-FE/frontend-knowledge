@@ -834,3 +834,7 @@ export function useState(initialState) {
   return useReducer(null, initialState);
 }
 ```
+
+### 〇 渲染流程图
+
+![图片](/frontend-knowledge/images/react/react-hooks-useReducer.jpg)
