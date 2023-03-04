@@ -23,7 +23,8 @@
 
 ```jsx
 /**
- * debug: true
+ * compact: true
+ * inline: true
  */
 import React from 'react';
 
@@ -31,10 +32,12 @@ export default () => (
   <h1>
     <div
       style={{
-        background: `url(https://img.shields.io/github/stars/UMCloud-FE/frontend-knowledge?style=social) no-repeat`,
+        background: `url(https://img.shields.io/github/stars/UMCloud-FE/frontend-knowledge?style=social) 10px 10px no-repeat`,
         height: '100px',
         lineHeight: '100px',
         fontSize: '20px',
+        cursor: 'pointer',
+        padding: '10px',
       }}
       onClick={() =>
         window.open(
