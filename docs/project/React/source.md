@@ -953,6 +953,7 @@ function invokeHooks(wip) {
   // 同步，阻塞了 commitWorker
   for (let i = 0; i < updateQueueOfLayout.length; i++) {
     const effect = updateQueueOfLayout[i];
+    // 未处理其返回值
     effect.create();
   }
 
@@ -966,6 +967,8 @@ function invokeHooks(wip) {
   }
 }
 ```
+
+> 思考：还记得 Effect 的函数有 return 么？在副作用消失时调用。这里，effect.create() 的返回值就是那个 return 的函数，所以，这里也应该加入调度队列，只是要控制调用时机，**因为其只在组件被 delete 时调用**。
 
 ### 〇 渲染流程图
 
