@@ -694,7 +694,8 @@ export function updateFunctionComponent(wip) {
 
 ```js
 let currentlyRenderingFiber = null;
-
+// 老hook, 在useEffect中使用
+let currentHook = null;
 // 当前工作中的hook，同wip一样，hooks也是一个链表，需要一个当前的指针位置标识
 let workInProgressHook = null;
 
@@ -723,11 +724,15 @@ function updateWorkInProgressHook() {
     if (workInProgressHook) {
       // 当前 hook 指针的位置
       workInProgressHook = hook = workInProgressHook.next;
+      currentHook = currentHook.next;
     } else {
       // 没有指针，就从 hook0 开始
       workInProgressHook = hook = currentlyRenderingFiber.memorizedState;
+      currentHook = current.memorizedState;
     }
   } else {
+    currentHook = null;
+
     // 1.初次渲染
     hook = {
       memorizedState: null, // state
@@ -835,6 +840,135 @@ export function useState(initialState) {
 }
 ```
 
+### ③ useEffect / useLayoutEffect
+
+useEffect 在页面渲染完成后进入调度队列执行，是异步的。useLayoutEffect 则是同步执行副作用操作，也就是说，它会在浏览器渲染之前运行。
+
+由于 useEffect 也可以有多个，所以，仍然是按照链表的方式存储的，这里为了便于大家理解，暂时用数组代替：
+
+```js
+export function renderWithHooks(wip) {
+  // old
+  currentlyRenderingFiber = wip;
+  currentlyRenderingFiber.memorizedState = null;
+  workInProgressHook = null;
+
+  // 为了方便，useEffect与useLayoutEffect区分开，并且以数组管理
+  // 源码中是放一起的，并且是个链表
+  currentlyRenderingFiber.updateQueueOfEffect = [];
+  currentlyRenderingFiber.updateQueueOfLayout = [];
+}
+```
+
+由于 useEffect 和 useLayoutEffect 都是在组件加载的某个时机执行一段方法。我们把公共的实现提取出来：
+
+```js
+function updateEffectImp(hooksFlags, create, deps) {
+  const hook = updateWorkInProgressHook();
+
+  if (currentHook) {
+    // 用于校验两次 依赖 是否有变化
+    const prevEffect = currentHook.memorizedState;
+    if (deps) {
+      const prevDeps = prevEffect.deps;
+      if (areHookInputsEqual(deps, prevDeps)) {
+        return;
+      }
+    }
+  }
+
+  const effect = { hooksFlags, create, deps };
+
+  hook.memorizedState = effect;
+
+  // useEffect
+  if (hooksFlags & HookPassive) {
+    currentlyRenderingFiber.updateQueueOfEffect.push(effect);
+    // useLayoutEffect
+  } else if (hooksFlags & HookLayout) {
+    currentlyRenderingFiber.updateQueueOfLayout.push(effect);
+  }
+}
+
+// ! HookFlags
+export const HookLayout = /*    */ 0b010;
+export const HookPassive = /*   */ 0b100;
+
+export function areHookInputsEqual(nextDeps, prevDeps) {
+  if (prevDeps == null) {
+    return false;
+  }
+
+  // 这里只是简单的按位置索引对比
+  for (let i = 0; i < prevDeps.length && i < nextDeps.length; i++) {
+    if (Object.is(nextDeps[i], prevDeps[i])) {
+      continue;
+    }
+    return false;
+  }
+
+  return true;
+}
+```
+
+最外层的调用可以这样写：
+
+```js
+export function useEffect(create, deps) {
+  return updateEffectImp(HookPassive, create, deps);
+}
+
+export function useLayoutEffect(create, deps) {
+  return updateEffectImp(HookLayout, create, deps);
+}
+```
+
+经过上面的函数后，组件内所有的 useEffect 就都收集在数组中了。接下来就是找个时机进度调度。分析一下，传递的函数需要在界面渲染前后调用，所以应该在 diff 之后，我们就把它加在 commit 函数中：
+
+```js
+function commitWorker(wip) {
+  // ...
+
+  if (wip.tag === FunctionComponent) {
+    invokeHooks(wip);
+  }
+
+  // 2. 提交子节点
+  commitWorker(wip.child);
+  // 3. 提交兄弟
+  commitWorker(wip.sibling);
+}
+```
+
+在当前节点变化更新完之后，还没有渲染子节点之前，检查一下是否有 useEffect 和 useLayoutEffect：
+
+```js
+// 之前写的调度函数
+import { scheduleCallback } from './scheduler';
+
+// 核心调用代码示例
+function invokeHooks(wip) {
+  const { updateQueueOfEffect, updateQueueOfLayout } = wip;
+
+  // 同步，阻塞了 commitWorker
+  for (let i = 0; i < updateQueueOfLayout.length; i++) {
+    const effect = updateQueueOfLayout[i];
+    effect.create();
+  }
+
+  // 加入调度，一般会在渲染结束后执行
+  for (let i = 0; i < updateQueueOfEffect.length; i++) {
+    const effect = updateQueueOfEffect[i];
+
+    scheduleCallback(() => {
+      effect.create();
+    });
+  }
+}
+```
+
 ### 〇 渲染流程图
 
 ![图片](/frontend-knowledge/images/react/react-hooks-useReducer.jpg)
+
+![图片](/frontend-knowledge/images/react/react-hooks-useEffect.png)
