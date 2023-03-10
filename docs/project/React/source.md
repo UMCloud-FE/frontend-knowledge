@@ -731,6 +731,7 @@ function updateWorkInProgressHook() {
       currentHook = current.memorizedState;
     }
   } else {
+    // currentHook 只有在 fiber 变更时才起作用，不然一直是 null
     currentHook = null;
 
     // 1.初次渲染
@@ -866,6 +867,7 @@ export function renderWithHooks(wip) {
 function updateEffectImp(hooksFlags, create, deps) {
   const hook = updateWorkInProgressHook();
 
+  // 初始化时没有 currentHook，必然会走到下边执行函数，组件状态变更时，会赋值 currentHook，用于拦截是否要更新
   if (currentHook) {
     // 用于校验两次 依赖 是否有变化
     const prevEffect = currentHook.memorizedState;
