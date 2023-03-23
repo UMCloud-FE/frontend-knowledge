@@ -41,4 +41,23 @@ export default defineConfig({
   analytics: {
     baidu: '6f17617aa4544e964fa0175726c2a460',
   },
+  // scripts: [
+  //   {
+  //     src: "https://giscus.app/client.js",
+  //     "data-repo": "UMCloud-FE/frontend-knowledge",
+  //     "data-repo-id": "R_kgDOIYRu5Q",
+  //     "data-category": "Announcements",
+  //     "data-category-id": "DIC_kwDOIYRu5c4CU1sl",
+  //     "data-mapping": "pathname",
+  //     "data-strict": "0",
+  //     "data-reactions-enabled": "1",
+  //     "data-emit-metadata": "1",
+  //     "data-input-position": "bottom",
+  //     "data-theme=": "light_tritanopia",
+  //     "data-lang": "zh-CN",
+  //     "data-loading": "lazy",
+  //     "crossorigin": "anonymous",
+  //     "async": true
+  //   }
+  // ],
 });

@@ -657,3 +657,362 @@ function workLoop() {
 ### 〇 改进的流程图
 
 ![图片](/frontend-knowledge/images/react/fiber-3.png)
+
+## 3. Hooks
+
+写在前边：Hooks 严格来说也是 fiber 的一部分，也牵扯到 diff 和调度，单独拿出来是因为他确实是一个独立的概念，同时也避免上一个章节太过臃肿。
+
+`Hooks` 本质就是处理函数式组件的状态的集合。状态，是 react vdom 中自定义的一个属性，我们在 fiber 化之后也应该有，这里加上：
+
+```js
+export function createFiber(vnode, returnFiber) {
+  const fiber = {
+    ...
+    memorizedState: null
+  }
+}
+```
+
+memorizedState 属性对于类式组件存放的是 state 对象，对于函数式组件比较麻烦，因为 hooks 是一个一个的，所以这里又用了链式存储，memorizedState 存放第一个 hooks 指针即可。
+
+因为 hooks 是函数式组件特有的，所以只会在渲染函数式组件时使用：
+
+```js
+export function updateFunctionComponent(wip) {
+  // 这里调用
+  renderWithHooks(wip);
+
+  const { type, props } = wip;
+  const children = type(props);
+  reconcileChildren(wip, children);
+}
+```
+
+我们新建一个 hooks.js 文件来同意处理 hook。
+
+先处理 hooks 中的全局属性：
+
+```js
+let currentlyRenderingFiber = null;
+// 老hook, 在useEffect中使用
+let currentHook = null;
+// 当前工作中的hook，同wip一样，hooks也是一个链表，需要一个当前的指针位置标识
+let workInProgressHook = null;
+
+export function renderWithHooks(wip) {
+  currentlyRenderingFiber = wip;
+  currentlyRenderingFiber.memorizedState = null;
+  workInProgressHook = null;
+}
+```
+
+这里类比前面的 fiber 应该好理解，讲当前 wip 传入变量 currentlyRenderingFiber，并初始化。
+
+接着写一个通用的方法来构造函数式组件中 hooks 的链表关系：
+
+```js
+function updateWorkInProgressHook() {
+  let hook;
+
+  // 拿到当前 fiber 在 diff 中的 old fiber
+  const current = currentlyRenderingFiber.alternate;
+
+  if (current) {
+    // 2.更新
+    currentlyRenderingFiber.memorizedState = current.memorizedState;
+
+    if (workInProgressHook) {
+      // 当前 hook 指针的位置
+      workInProgressHook = hook = workInProgressHook.next;
+      currentHook = currentHook.next;
+    } else {
+      // 没有指针，就从 hook0 开始
+      workInProgressHook = hook = currentlyRenderingFiber.memorizedState;
+      currentHook = current.memorizedState;
+    }
+  } else {
+    // currentHook 只有在 fiber 变更时才起作用，不然一直是 null
+    currentHook = null;
+
+    // 1.初次渲染
+    hook = {
+      memorizedState: null, // state
+      next: null, // 下一个hook
+    };
+
+    if (workInProgressHook) {
+      // 如果已经有hook，就找链表下一个，移动指针
+      workInProgressHook = workInProgressHook.next = hook;
+    } else {
+      // 不然就初始化memorizedState
+      workInProgressHook = currentlyRenderingFiber.memorizedState = hook;
+    }
+  }
+
+  return hook;
+}
+```
+
+到这里，一个简单的 Hooks 就初始化完成啦。接下来看看具体的 hooks 怎么用吧。
+
+### ① useReducer
+
+useReducer 是 useState 的替代品，使用的方式如下：
+
+```js
+// 声明
+const initialState = 1;
+const reducer = (state: number, action: any | { type: string, value: any }) => {
+  return state + 1;
+};
+
+const [count, dispatch] = useReducer(reducer, initialState);
+
+// 调用
+dispatch('add');
+```
+
+分析一下，useReducer 也是一个函数，接受一个处理函数 reducer 和一个初始值；同事返回一个当前的最新值和触发 reducer 的函数 dispatch，这个 dispatch 可以接受一个 action 参数，action 可以是一个字符串也可以是 一个对象：{ type, value }。
+
+我们定义这个函数：
+
+```js
+export function useReducer(reducer, initalState) {
+  // 拿到当前的 workInProgressHook
+  const hook = updateWorkInProgressHook();
+  // 给初始值
+  if (!currentlyRenderingFiber.alternate) {
+    // 如果没有经过 diff 标记赋值 alternate，说明还没有初始化过 state。没有对比就不会存在 state 改变
+    hook.memorizedState = initalState;
+  }
+
+  ...
+}
+```
+
+接下来就是实现 将 reducer 转变为 dispatch 了。
+
+我们声明一个转换函数：
+
+```js
+function dispatchReducerAction(fiber, hook, reducer, action) {
+  // hook.memorizedState = reducer ? reducer(hook.memorizedState) : action;
+  if (reducer) {
+    hook.memorizedState = reducer(hook.memorizedState, action);
+  } else {
+    // useState: setState(1);
+    hook.memorizedState = action;
+  }
+
+  // 更新 alternate， fiber已经改变
+  fiber.alternate = { ...fiber };
+  // 兄弟节点置空，意思是只更新当前函数节点即可。这里不用担心链表断掉，reconcileChildren 中会重新构造链表关系。hook 更新只是据局部更新
+  fiber.sibling = null;
+  scheduleUpdateOnFiber(fiber);
+}
+```
+
+由于 参数 fiber, hook, reducer 是我们内部处理的，只有 action 是外部传的，所以，我们在 useReducer 这里 bind 一下：
+
+```js
+// useReducer 函数
+...
+
+// bind 到 null 上，是为了让 currentlyRenderingFiber 更新，直接调用 dispatchReducerAction，其指针指向没有变化，有多个函数式组件时，会产生渲染错乱。
+// currentlyRenderingFiber 作为一个形参存进来，形成了一个闭包。如果有多个函数式组件都有hooks的话，他们的currentlyRenderingFiber是各自的fiber，不会造成指针混乱。
+const dispatch = dispatchReducerAction.bind(
+  null,
+  currentlyRenderingFiber,
+  hook,
+  reducer
+);
+
+return [hook.memorizedState, dispatch];
+```
+
+### ② useState
+
+useState 是 useReducer 的一个特殊形态，没有 reducer，每次只返回 action 里的值。
+
+```js
+// reducer 为 null
+export function useState(initialState) {
+  return useReducer(null, initialState);
+}
+```
+
+### ③ useEffect / useLayoutEffect
+
+useEffect 在页面渲染完成后进入调度队列执行，是异步的。useLayoutEffect 则是同步执行副作用操作，也就是说，它会在浏览器渲染之前运行。
+
+由于 useEffect 也可以有多个，所以，仍然是按照链表的方式存储的，这里为了便于大家理解，暂时用数组代替：
+
+```js
+export function renderWithHooks(wip) {
+  // old
+  currentlyRenderingFiber = wip;
+  currentlyRenderingFiber.memorizedState = null;
+  workInProgressHook = null;
+
+  // 为了方便，useEffect与useLayoutEffect区分开，并且以数组管理
+  // 源码中是放一起的，并且是个链表
+  currentlyRenderingFiber.updateQueueOfEffect = [];
+  currentlyRenderingFiber.updateQueueOfLayout = [];
+}
+```
+
+由于 useEffect 和 useLayoutEffect 都是在组件加载的某个时机执行一段方法。我们把公共的实现提取出来：
+
+```js
+function updateEffectImp(hooksFlags, create, deps) {
+  const hook = updateWorkInProgressHook();
+
+  // 初始化时没有 currentHook，必然会走到下边执行函数，组件状态变更时，会赋值 currentHook，用于拦截是否要更新
+  if (currentHook) {
+    // 用于校验两次 依赖 是否有变化
+    const prevEffect = currentHook.memorizedState;
+    if (deps) {
+      const prevDeps = prevEffect.deps;
+      if (areHookInputsEqual(deps, prevDeps)) {
+        return;
+      }
+    }
+  }
+
+  const effect = { hooksFlags, create, deps };
+
+  hook.memorizedState = effect;
+
+  // useEffect
+  if (hooksFlags & HookPassive) {
+    currentlyRenderingFiber.updateQueueOfEffect.push(effect);
+    // useLayoutEffect
+  } else if (hooksFlags & HookLayout) {
+    currentlyRenderingFiber.updateQueueOfLayout.push(effect);
+  }
+}
+
+// ! HookFlags
+export const HookLayout = /*    */ 0b010;
+export const HookPassive = /*   */ 0b100;
+
+export function areHookInputsEqual(nextDeps, prevDeps) {
+  if (prevDeps == null) {
+    return false;
+  }
+
+  // 这里只是简单的按位置索引对比
+  for (let i = 0; i < prevDeps.length && i < nextDeps.length; i++) {
+    if (Object.is(nextDeps[i], prevDeps[i])) {
+      continue;
+    }
+    return false;
+  }
+
+  return true;
+}
+```
+
+最外层的调用可以这样写：
+
+```js
+export function useEffect(create, deps) {
+  return updateEffectImp(HookPassive, create, deps);
+}
+
+export function useLayoutEffect(create, deps) {
+  return updateEffectImp(HookLayout, create, deps);
+}
+```
+
+经过上面的函数后，组件内所有的 useEffect 就都收集在数组中了。接下来就是找个时机进度调度。分析一下，传递的函数需要在界面渲染前后调用，所以应该在 diff 之后，我们就把它加在 commit 函数中：
+
+```js
+function commitWorker(wip) {
+  // ...
+
+  if (wip.tag === FunctionComponent) {
+    invokeHooks(wip);
+  }
+
+  // 2. 提交子节点
+  commitWorker(wip.child);
+  // 3. 提交兄弟
+  commitWorker(wip.sibling);
+}
+```
+
+在当前节点变化更新完之后，还没有渲染子节点之前，检查一下是否有 useEffect 和 useLayoutEffect：
+
+```js
+// 之前写的调度函数
+import { scheduleCallback } from './scheduler';
+
+// 核心调用代码示例
+function invokeHooks(wip) {
+  const { updateQueueOfEffect, updateQueueOfLayout } = wip;
+
+  // 同步，阻塞了 commitWorker
+  for (let i = 0; i < updateQueueOfLayout.length; i++) {
+    const effect = updateQueueOfLayout[i];
+    // 未处理其返回值
+    effect.create();
+  }
+
+  // 加入调度，一般会在渲染结束后执行
+  for (let i = 0; i < updateQueueOfEffect.length; i++) {
+    const effect = updateQueueOfEffect[i];
+
+    scheduleCallback(() => {
+      effect.create();
+    });
+  }
+}
+```
+
+> 思考：还记得 Effect 的函数有 return 么？在副作用消失时调用。这里，effect.create() 的返回值就是那个 return 的函数，所以，这里也应该加入调度队列，只是要控制调用时机，**因为其只在组件被 delete 时调用**。
+
+### 〇 渲染流程图
+
+![图片](/frontend-knowledge/images/react/react-hooks-useReducer.jpg)
+
+![图片](/frontend-knowledge/images/react/react-hooks-useEffect.png)
+
+```jsx
+/**
+ * compact: true
+ * inline: true
+ */
+import React from 'react';
+import Giscus from '@giscus/react';
+
+export default function Main() {
+  return (
+    <section style={{ marginTop: '32px' }}>
+      <Giscus
+        id="comments"
+        reactionsEnabled="1"
+        emitMetadata="0"
+        inputPosition="bottom"
+        loading="lazy"
+        src="https://giscus.app/client.js"
+        repo="UMCloud-FE/frontend-knowledge"
+        repoId="R_kgDOIYRu5Q"
+        category="Announcements"
+        categoryId="DIC_kwDOIYRu5c4CU1sl"
+        mapping="URL"
+        strict="0"
+        reactionsEnabled="1"
+        emitMetadata="1"
+        inputPosition="bottom"
+        theme="light_tritanopia"
+        lang="zh-CN"
+        loading="lazy"
+        crossorigin="anonymous"
+        async={true}
+        // theme={giscusTheme}
+      />
+    </section>
+  );
+}
+```

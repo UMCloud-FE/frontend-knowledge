@@ -19,18 +19,34 @@
 
 问问自己：**这周个人产出和价值是什么？**
 
+---
+
 ```jsx
+/**
+ * compact: true
+ * inline: true
+ */
 import React from 'react';
 
 export default () => (
   <h1>
     <div
       style={{
-        background: `url(https://img.shields.io/github/gist/stars/47a4d00457a92aa426dbd48a18776322?style=social) no-repeat`,
-        height: '30px',
+        background: `url(https://img.shields.io/github/stars/UMCloud-FE/frontend-knowledge?style=social) 10px 10px no-repeat`,
+        height: '100px',
+        lineHeight: '100px',
+        fontSize: '20px',
+        cursor: 'pointer',
+        padding: '10px',
       }}
+      onClick={() =>
+        window.open(
+          'https://github.com/UMCloud-FE/frontend-knowledge',
+          '_blank',
+        )
+      }
     >
-      {' '}
+      {'觉得作者写的还行的，可以给一个小星星哦！'}
     </div>
   </h1>
 );
