@@ -9,6 +9,7 @@ export default defineConfig({
       { title: '前端工程化', link: '/project' },
       { title: '测试与运维', link: '/devops' },
       { title: '资源', link: '/common' },
+      { title: '微前端', link: '/app'}
     ],
     // 需要特殊配置的目录
     // sidebar: {
