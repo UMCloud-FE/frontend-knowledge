@@ -23,8 +23,6 @@ import { usePrefersColor } from 'dumi';
 export default function Main() {
   const [color] = usePrefersColor();
 
-  console.log(color);
-
   return (
     <section style={{ marginTop: '32px' }}>
       <Giscus

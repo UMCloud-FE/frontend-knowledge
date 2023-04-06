@@ -423,9 +423,12 @@ createElement 创建元素，props 通过 updateNode 更新
 
 ```js
 export function updateHostComponent(wip) {
+  // 初次加载，stateNode=null
   if (!wip.stateNode) {
     // type : dom.nodeName.toLowerCase()
     wip.stateNode = document.createElement(wip.type);
+    // 最终都会归类到原生节点
+    // 初始化在这里commit，之后的更新在commitWorker里commit
     updateNode(wip.stateNode, {}, wip.props);
   }
 
@@ -978,6 +981,172 @@ function invokeHooks(wip) {
 
 ![图片](/frontend-knowledge/images/react/react-hooks-useEffect.png)
 
+## 4. Diff 算法高级
+
+这里讲解一下高阶版 diff 算法。
+
+上边的 diff 算法（reconcileChildren）问题：
+
+- 按位置对比，重复组件没办法复用，性能较低
+
+因为大多数情况，页面的变化都是很小的，大部分 dom 树都是不变的，只有个别的变化，之前的算法中，如果对应位置上节点不一样就直接删掉，下边有需要这个节点了，只好再创建，成本高了不少。
+
+算法思路：
+
+- 创建一个 hash 表存放缓存节点
+- 需要删除的节点删掉后存到 hash 表中
+- 每需要新增一个位置的节点时，从 hash 表中读取
+- 一轮 diff 做完之后，清空 hash 表
+
+考虑到 fiber 的单链表结构，就不使用 vue 的双指针从前后同步查询，而是从左边往右遍历，比较新老节点，如果节点可以复用，继续往右，否则就停止。
+
+```js
+// oldfiber的头结点
+let oldFiber = returnFiber.alternate?.child;
+// 下一个oldFiber | 暂时缓存下一个oldFiber
+let nextOldFiber = null;
+// 用于判断是returnFiber初次渲染还是更新
+let shouldTrackSideEffects = !!returnFiber.alternate;
+let previousNewFiber = null;
+let newIndex = 0;
+// 上一次dom节点插入的最远位置
+// old 0 1 2 3 4
+// new 2 1 3 4
+let lastPlacedIndex = 0;
+
+// *1. 从左边往右遍历，比较新老节点，如果节点可以复用，继续往右，否则就停止
+for (; oldFiber && newIndex < newChildren.length; newIndex++) {
+  const newChild = newChildren[newIndex];
+  if (newChild == null) {
+    continue;
+  }
+
+  if (oldFiber.index > newIndex) {
+    nextOldFiber = oldFiber;
+    oldFiber = null;
+  } else {
+    nextOldFiber = oldFiber.sibling;
+  }
+
+  const same = sameNode(newChild, oldFiber);
+  if (!same) {
+    if (oldFiber == null) {
+      oldFiber = nextOldFiber;
+    }
+    break;
+  }
+  const newFiber = createFiber(newChild, returnFiber);
+
+  Object.assign(newFiber, {
+    stateNode: oldFiber.stateNode,
+    alternate: oldFiber,
+    flags: Update,
+  });
+
+  // 节点更新
+  lastPlacedIndex = placeChild(
+    newFiber,
+    lastPlacedIndex,
+    newIndex,
+    shouldTrackSideEffects,
+  );
+
+  if (previousNewFiber == null) {
+    returnFiber.child = newFiber;
+  } else {
+    previousNewFiber.sibling = newFiber;
+  }
+
+  previousNewFiber = newFiber;
+  oldFiber = nextOldFiber;
+}
+
+// *2. 新节点没了，老节点还有
+// 0 1 2
+// 0
+if (newIndex === newChildren.length) {
+  deleteRemainingChildren(returnFiber, oldFiber);
+  return;
+}
+
+// *3. 初次渲染
+// 1）初次渲染
+// 2）老节点没了，新节点还有
+if (!oldFiber) {
+  for (; newIndex < newChildren.length; newIndex++) {
+    const newChild = newChildren[newIndex];
+    if (newChild == null) {
+      continue;
+    }
+    const newFiber = createFiber(newChild, returnFiber);
+
+    lastPlacedIndex = placeChild(
+      newFiber,
+      lastPlacedIndex,
+      newIndex,
+      shouldTrackSideEffects,
+    );
+
+    if (previousNewFiber === null) {
+      // head node
+      returnFiber.child = newFiber;
+    } else {
+      previousNewFiber.sibling = newFiber;
+    }
+
+    previousNewFiber = newFiber;
+  }
+}
+
+// *4 新老节点都还有
+// 小而乱
+// old 0 1 [2 3 4]
+// new 0 1 [3 4]
+// !4.1 把剩下的old单链表构建哈希表
+const existingChildren = mapRemainingChildren(oldFiber);
+
+// !4.2 遍历新节点，通过新节点的key去哈希表中查找节点，找到就复用节点，并且删除哈希表中对应的节点
+for (; newIndex < newChildren.length; newIndex++) {
+  const newChild = newChildren[newIndex];
+  if (newChild == null) {
+    continue;
+  }
+  const newFiber = createFiber(newChild, returnFiber);
+
+  // oldFiber
+  const matchedFiber = existingChildren.get(newFiber.key || newFiber.index);
+  if (matchedFiber) {
+    // 节点复用
+    Object.assign(newFiber, {
+      stateNode: matchedFiber.stateNode,
+      alternate: matchedFiber,
+      flags: Update,
+    });
+
+    existingChildren.delete(newFiber.key || newFiber.index);
+  }
+
+  lastPlacedIndex = placeChild(
+    newFiber,
+    lastPlacedIndex,
+    newIndex,
+    shouldTrackSideEffects,
+  );
+
+  if (previousNewFiber == null) {
+    returnFiber.child = newFiber;
+  } else {
+    previousNewFiber.sibling = newFiber;
+  }
+  previousNewFiber = newFiber;
+}
+
+// *5 old的哈希表中还有值，遍历哈希表删除所有old
+if (shouldTrackSideEffects) {
+  existingChildren.forEach((child) => deleteChild(returnFiber, child));
+}
+```
+
 ```jsx
 /**
  * compact: true
@@ -985,8 +1154,11 @@ function invokeHooks(wip) {
  */
 import React from 'react';
 import Giscus from '@giscus/react';
+import { usePrefersColor } from 'dumi';
 
 export default function Main() {
+  const [color] = usePrefersColor();
+
   return (
     <section style={{ marginTop: '32px' }}>
       <Giscus
@@ -1005,7 +1177,7 @@ export default function Main() {
         reactionsEnabled="1"
         emitMetadata="1"
         inputPosition="bottom"
-        theme="light_tritanopia"
+        theme={color === 'dark' ? 'dark_tritanopia' : 'light_tritanopia'}
         lang="zh-CN"
         loading="lazy"
         crossorigin="anonymous"
