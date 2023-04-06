@@ -1,6 +1,6 @@
 ---
 title: interface
-order: 2
+order: 4
 
 group:
   title: TYPESCRIPT

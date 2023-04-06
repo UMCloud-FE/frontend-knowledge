@@ -1,6 +1,6 @@
 ---
 title: 装饰器
-order: 6
+order: 8
 
 group:
   title: TYPESCRIPT
