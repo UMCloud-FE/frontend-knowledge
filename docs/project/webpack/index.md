@@ -18,3 +18,5 @@ group:
 ## [六、tapable 的使用](/project/webpack/tapable-usage)
 
 ## [七、实现一个 tapable](/project/webpack/tapable-implement)
+
+## [八、利用 tapable 实现一个微前端架构](/project/webpack/micro-app)
