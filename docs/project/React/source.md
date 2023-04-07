@@ -1000,6 +1000,84 @@ function invokeHooks(wip) {
 
 考虑到 fiber 的单链表结构，就不使用 vue 的双指针从前后同步查询，而是从左边往右遍历，比较新老节点，如果节点可以复用，继续往右，否则就停止。
 
+### 流程图
+
+渲染树（pfiber 就是 returnFiber）：
+![图片](/frontend-knowledge/images/react/diff-1.png)
+
+第一步：从左往右遍历，查找直接能用的，直到遇到不能用的为止（下图中的数字代表该 fiber 的 index）：
+
+![图片](/frontend-knowledge/images/react/diff-2.png)
+
+能复用的：
+
+```js
+const same = sameNode(newChild, oldFiber);
+
+if (same) {
+  const newFiber = createFiber(newChild, returnFiber);
+
+  Object.assign(newFiber, {
+    stateNode: oldFiber.stateNode,
+    alternate: oldFiber,
+    flags: Update,
+  });
+}
+
+// newIndex 指针后移
+// lastPlacedIndex 指向最后放置的位置
+```
+
+停止条件：`!sameNode(newChild, oldFiber)`
+
+第二步：如新节点没有了（newIndex === newChildren.length）：
+
+![图片](/frontend-knowledge/images/react/diff-3.png)
+
+老节点往后的加入删除队列：
+
+```js
+// 遍历随后的节点，加入父节点的 deletions
+returnFiber.deletions.push(...)
+```
+
+第三步：如果老节点没有了：
+
+![图片](/frontend-knowledge/images/react/diff-4.png)
+
+新的节点依次构建链表：
+
+```js
+...
+if (previousNewFiber == null) {
+  returnFiber.child = newFiber;
+} else {
+  previousNewFiber.sibling = newFiber;
+}
+```
+
+第四步：其他情况，使用 hash 表索引
+
+```js
+// 举例1
+// 0 1 [2 3 4 5 6]
+// 0 1 [3 4 5 6 7 2]
+
+// 举例2
+// [0 1 2 3 4 5 6]
+// [2 1 3 4 5]
+
+// 把老节点加入Map
+const existingChildren = mapRemainingChildren(oldFiber); // new Map()
+// 遍历新节点，通过新节点的key去哈希表中查找节点，找到就复用节点，并且删除哈希表中对应的节点
+```
+
+![图片](/frontend-knowledge/images/react/diff-5.png)
+
+第五步：新节点遍历完后，若 hash 表中仍然有节点，则把这些节点加入 returnFiber.deletions;
+
+### 示意代码
+
 ```js
 // oldfiber的头结点
 let oldFiber = returnFiber.alternate?.child;
@@ -1144,6 +1222,96 @@ for (; newIndex < newChildren.length; newIndex++) {
 // *5 old的哈希表中还有值，遍历哈希表删除所有old
 if (shouldTrackSideEffects) {
   existingChildren.forEach((child) => deleteChild(returnFiber, child));
+}
+```
+
+其中工具函数：
+
+```js
+// 初次渲染，只是记录下标
+// 更新，检查节点是否移动
+function placeChild(
+  newFiber,
+  lastPlacedIndex,
+  newIndex,
+  shouldTrackSideEffects,
+) {
+  newFiber.index = newIndex;
+  if (!shouldTrackSideEffects) {
+    // 父节点初次渲染
+    return lastPlacedIndex;
+  }
+  // 父节点更新
+  // 子节点是初次渲染还是更新呢
+  const current = newFiber.alternate;
+  if (current) {
+    const oldIndex = current.index;
+    // 子节点是更新
+    // lastPlacedIndex 记录了上次dom节点的相对更新节点的最远位置
+    // old 0 1 2 3 4
+    // new 2 1 3 4
+    // 2 1(6) 3 4
+    if (oldIndex < lastPlacedIndex) {
+      // move
+      newFiber.flags |= Placement;
+      return lastPlacedIndex;
+    } else {
+      return oldIndex;
+    }
+  } else {
+    // 子节点是初次渲染
+    newFiber.flags |= Placement;
+    return lastPlacedIndex;
+  }
+}
+
+// hash表
+function mapRemainingChildren(currentFirstChild) {
+  const existingChildren = new Map();
+
+  let existingChild = currentFirstChild;
+  while (existingChild) {
+    // key: value
+    // key||index: fiber
+    existingChildren.set(
+      existingChild.key || existingChild.index,
+      existingChild,
+    );
+    existingChild = existingChild.sibling;
+  }
+
+  return existingChildren;
+}
+```
+
+在 commitWorker 里加入：
+
+```js
+if (flags & Placement && stateNode) {
+  // 1
+  // 0 1 2 3 4
+  // 2 1 3 4
+  const before = getHostSibling(wip.sibling);
+  insertOrAppendPlacementNode(stateNode, before, parentNode);
+  // parentNode.appendChild(stateNode);
+}
+
+...
+function getHostSibling(sibling) {
+  while (sibling) {
+    if (sibling.stateNode && !(sibling.flags & Placement)) {
+      return sibling.stateNode;
+    }
+    sibling = sibling.sibling;
+  }
+  return null;
+}
+function insertOrAppendPlacementNode(stateNode, before, parentNode) {
+  if (before) {
+    parentNode.insertBefore(stateNode, before);
+  } else {
+    parentNode.appendChild(stateNode);
+  }
 }
 ```
 
