@@ -7,6 +7,8 @@ group:
   order: 1
 ---
 
+## [基础类型](/project/ts/base)
+
 ## [interface](/project/ts/interface)
 
 ## [泛型](/project/ts/generic)

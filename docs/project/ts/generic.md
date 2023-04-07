@@ -1,6 +1,6 @@
 ---
 title: 泛型
-order: 3
+order: 5
 
 group:
   title: TYPESCRIPT

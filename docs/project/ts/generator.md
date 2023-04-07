@@ -1,6 +1,6 @@
 ---
 title: 生成器
-order: 5
+order: 7
 
 group:
   title: TYPESCRIPT
