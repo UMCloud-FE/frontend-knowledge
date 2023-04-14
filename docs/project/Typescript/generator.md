@@ -3,7 +3,7 @@ title: 生成器
 order: 7
 
 group:
-  title: TYPESCRIPT
+  title: 编程语言
   order: 1
 ---
 

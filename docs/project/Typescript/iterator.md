@@ -3,7 +3,7 @@ title: 迭代器
 order: 6
 
 group:
-  title: TYPESCRIPT
+  title: 编程语言
   order: 1
 ---
 

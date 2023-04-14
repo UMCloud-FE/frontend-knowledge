@@ -3,7 +3,7 @@ title: interface
 order: 4
 
 group:
-  title: TYPESCRIPT
+  title: 编程语言
   order: 1
 ---
 

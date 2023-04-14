@@ -3,7 +3,7 @@ title: 基础类型
 order: 2
 
 group:
-  title: TYPESCRIPT
+  title: 编程语言
   order: 1
 ---
 

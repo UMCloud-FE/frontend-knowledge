@@ -21,7 +21,8 @@
     ]
   },
   "dependencies": {
-    "@giscus/react": "^2.2.8"
+    "@giscus/react": "^2.2.8",
+    "ahooks": "^3.7.6"
   },
   "devDependencies": {
     "@commitlint/cli": "^17.1.2",

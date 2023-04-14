@@ -3,7 +3,7 @@ title: 泛型
 order: 5
 
 group:
-  title: TYPESCRIPT
+  title: 编程语言
   order: 1
 ---
 

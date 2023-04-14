@@ -981,6 +981,204 @@ function invokeHooks(wip) {
 
 ![图片](/frontend-knowledge/images/react/react-hooks-useEffect.png)
 
+接下来，我们抛开 fiber，简化一下源码逻辑，同时换一种思路来看 hook 本身，使用 preact 中的实现来讲解：
+
+### ④ useMemo / useCallback
+
+我们把 react 内置的 hook 都编上号，便于 devtool 解析，比如 useState 是 1，useCallback 是 8，useMemo 是 7 等等。于是有了下表：
+
+| hook                | 编号（currentHook） |
+| ------------------- | ------------------- |
+| useState            | 1                   |
+| useReducer          | 2                   |
+| useEffect           | 3                   |
+| useLayoutEffect     | 4                   |
+| useRef              | 5                   |
+| useImperativeHandle | 6                   |
+| useMemo             | 7                   |
+| useCallback         | 8                   |
+| useContext          | 9                   |
+| useErrorBoundary    | 10                  |
+| useId               | 11                  |
+
+我们可以通过 getHookState 方法获取到这个 hook 的状态：
+
+```js
+function getHookState(index, type) {
+  // 通过 type 记录 state 类型，便于 devTool 解析
+  ...
+  // 通过 index 获取当前 hook
+  const hooks =
+		currentComponent.__hooks ||
+		(currentComponent.__hooks = {
+			_list: [],
+			_pendingEffects: []
+		});
+
+	if (index >= hooks._list.length) {
+		hooks._list.push({ _pendingValue: EMPTY });
+	}
+	return hooks._list[index];
+}
+```
+
+给当前的 vnode（currentComponent）设置`__hooks`属性，每一个 hook 呢，又有自己的`_list`来放置 hook 们的状态，以 useMemo 为例：
+
+```ts
+export interface MemoHookState {
+  _value?: any;
+  _pendingValue?: any;
+  _args?: any[];
+  _pendingArgs?: any[];
+  _factory?: () => any;
+}
+```
+
+同时每一个 hook 还有自己的 \_pendingEffects：
+
+```ts
+export interface EffectHookState {
+  _value?: Effect;
+  _args?: any[];
+  _pendingArgs?: any[];
+  _cleanup?: Cleanup | void;
+}
+```
+
+useMemo:
+
+```js
+// hook按照递增顺序，会给一个currentIndex
+// factory：用户传入的缓存函数
+// args: 依赖数组
+export function useMemo(factory, args) {
+  /** @type {import('./internal').MemoHookState} */
+  const state = getHookState(currentIndex++, 7);
+  if (argsChanged(state._args, args)) {
+    state._pendingValue = factory();
+    state._pendingArgs = args;
+    state._factory = factory;
+    return state._pendingValue;
+  }
+
+  return state._value;
+}
+
+// 检测依赖更新
+// 返回true的情况：没有old deps、依赖长度变化、新依赖中有不和原依赖一样的对象
+function argsChanged(oldArgs, newArgs) {
+  return (
+    !oldArgs ||
+    oldArgs.length !== newArgs.length ||
+    newArgs.some((arg, index) => arg !== oldArgs[index])
+  );
+}
+```
+
+接下来看一下 useCallback:
+
+```js
+// currentHook 就是用于 devtool 解析的变量，这里忽略
+export function useCallback(callback, args) {
+  currentHook = 8;
+  return useMemo(() => callback, args);
+}
+```
+
+### ⑤ useDebounce
+
+接下来我们来引申一下第三方 hook 库`ahooks`中的一个防抖 hook。
+
+使用：
+
+```jsx
+import React, { useState } from 'react';
+import { useDebounce } from 'ahooks';
+
+export default () => {
+  const [value, setValue] = useState<string>();
+  const debouncedValue = useDebounce(value, { wait: 500 });
+
+  return (
+    <div>
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="Typed value"
+        style={{ width: 280 }}
+      />
+      <p style={{ marginTop: 16 }}>DebouncedValue: {debouncedValue}</p>
+    </div>
+  );
+};
+```
+
+原理：
+
+```js
+// 外层函数入参：func, wait, options（maxWait等参数）
+// 内层函数
+function debounced(...args) {
+  const time = Date.now();
+  const isInvoking = shouldInvoke(time);
+
+  lastArgs = args;
+  lastThis = this;
+  lastInvokeTime = time;
+
+  if (timerId) {
+    cancelTimer();
+  }
+
+  if (isInvoking) {
+    // 重启定时器函数 timerExpired
+    timerId = startTimer(timerExpired, wait);
+    return invokeFunc(lastInvokeTime);
+  }
+
+  return result;
+}
+
+function invokeFunc(time) {
+  const args = lastArgs;
+  const thisArg = lastThis;
+
+  lastArgs = lastThis = undefined;
+  lastInvokeTime = time;
+  result = func.apply(thisArg, args);
+  return result;
+}
+```
+
+其中：
+
+```js
+function shouldInvoke(time) {
+  const timeSinceLastInvoke = time - lastInvokeTime; // 距离上一次调用的时间差
+
+  return (
+    lastInvokeTime === undefined ||
+    timeSinceLastInvoke >= wait ||
+    timeSinceLastInvoke < 0 ||
+    (maxing && timeSinceLastInvoke >= maxWait)
+  );
+}
+
+// 这些都是内部对象，兼容了js不同运行时环境的其那句对象
+const root =
+  freeGlobalThis || freeGlobal || freeSelf || Function('return this')();
+const useRAF =
+  !wait && wait !== 0 && typeof root.requestAnimationFrame === 'function';
+
+function startTimer(pendingFunc, wait) {
+  if (useRAF) {
+    root.cancelAnimationFrame(timerId);
+    return root.requestAnimationFrame(pendingFunc);
+  }
+  return setTimeout(pendingFunc, wait);
+}
+```
+
 ## 4. Diff 算法高级
 
 这里讲解一下高阶版 diff 算法。
